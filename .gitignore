@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+dist_installer/
+*.spec
+!idea-checker.spec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 配置（含API key）
+config.json
+*.local.json
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 临时
+*.tmp
+*.log
+upload_batches*/
+batch_upload.py
+split_batches*.py
