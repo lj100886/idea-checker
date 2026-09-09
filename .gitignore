@@ -33,7 +33,11 @@ dist_installer/
 
 # 配置（含API key）
 config.json
+config*.json
 *.local.json
+.env
+*.key
+.idea-checker/
 
 # 系统
 .DS_Store
