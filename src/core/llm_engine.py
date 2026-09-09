@@ -88,6 +88,8 @@ class LLMEngine:
             results_text += f"{i+1}. [{r.source}] {r.title}\n   URL: {r.url}\n   摘要: {r.snippet[:200]}\n"
             if r.github_meta:
                 results_text += f"   Stars: {r.github_meta.stars}\n"
+            if r.readme:
+                results_text += f"   README精读: {r.readme[:600].replace(chr(10), ' ')}\n"
         user_msg = f"用户想法：{idea}\n\n搜索结果：\n{results_text}"
         if context:
             user_msg += f"\n\n历史分析：{json.dumps(context, ensure_ascii=False)[:1000]}"
@@ -98,7 +100,10 @@ class LLMEngine:
             rating = Rating(data.get("rating", "信息不足"))
         except ValueError:
             rating = Rating.UNKNOWN
-        analysis = Analysis(has_similar=data.get("has_similar", False), similar_count=data.get("similar_count", 0), max_quality=data.get("max_quality", ""), differentiation=data.get("differentiation", ""), rating=rating, confidence=data.get("confidence", 0.0), key_findings=data.get("key_findings", []), missing_info=data.get("missing_info", []))
+        evidence = data.get("evidence", [])
+        if not isinstance(evidence, list):
+            evidence = []
+        analysis = Analysis(has_similar=data.get("has_similar", False), similar_count=data.get("similar_count", 0), max_quality=data.get("max_quality", ""), differentiation=data.get("differentiation", ""), rating=rating, confidence=data.get("confidence", 0.0), key_findings=data.get("key_findings", []), missing_info=data.get("missing_info", []), evidence=evidence)
         return analysis, usage
 
     def should_continue(self, analysis: Analysis, trace_id: str = "") -> Tuple[bool, List[SearchQuery], TokenUsage]:
@@ -123,7 +128,7 @@ class LLMEngine:
         persona_prompt = config.get_persona(persona)
         if persona_prompt:
             system_prompt += f"\n\n【人设】\n{persona_prompt}"
-        analysis_dict = {"rating": analysis.rating.value, "confidence": analysis.confidence, "key_findings": analysis.key_findings, "differentiation": analysis.differentiation}
+        analysis_dict = {"rating": analysis.rating.value, "confidence": analysis.confidence, "key_findings": analysis.key_findings, "differentiation": analysis.differentiation, "evidence": analysis.evidence}
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"想法：{idea}\n分析：{json.dumps(analysis_dict, ensure_ascii=False)}"}]
         content, usage = self.llm.chat(messages, temperature=0.6, max_tokens=1000, trace_id=trace_id)
         data = self._parse_json_response(content)

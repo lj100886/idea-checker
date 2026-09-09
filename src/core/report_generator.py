@@ -8,10 +8,29 @@ class ReportGenerator:
     """报告格式化"""
 
     @staticmethod
+    def _evidence_lines(report: Report) -> list:
+        """提取证据链行；无证据返回空列表"""
+        evidence = getattr(report.raw_analysis, "evidence", []) or []
+        lines = []
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+            url = item.get("url", "")
+            title = item.get("title", "")
+            verdict = item.get("verdict", "")
+            ev = item.get("evidence", "")
+            lines.append(f"  - {title}（{verdict}）：{ev} {url}".rstrip())
+        return lines
+
+    @staticmethod
     def to_text(report: Report) -> str:
         lines = ["=" * 50, f"选题审查报告", f"想法：{report.idea}", f"评级：{report.rating.value}", f"人设：{report.persona}", "=" * 50, "", "【结论】", report.conclusion, "", "【关键发现】"]
         for i, f in enumerate(report.findings, 1):
             lines.append(f"  {i}. {f}")
+        evidence_lines = ReportGenerator._evidence_lines(report)
+        if evidence_lines:
+            lines.extend(["", "【证据链】"])
+            lines.extend(evidence_lines)
         lines.extend(["", "【建议】"])
         for i, s in enumerate(report.suggestions, 1):
             lines.append(f"  {i}. {s}")
@@ -22,7 +41,7 @@ class ReportGenerator:
 
     @staticmethod
     def to_json(report: Report) -> str:
-        data = {"idea": report.idea, "rating": report.rating.value, "conclusion": report.conclusion, "findings": report.findings, "suggestions": report.suggestions, "persona": report.persona, "confidence": report.raw_analysis.confidence, "search_rounds": report.raw_analysis.search_rounds, "trace_id": report.trace_id}
+        data = {"idea": report.idea, "rating": report.rating.value, "conclusion": report.conclusion, "findings": report.findings, "suggestions": report.suggestions, "persona": report.persona, "confidence": report.raw_analysis.confidence, "search_rounds": report.raw_analysis.search_rounds, "evidence": getattr(report.raw_analysis, "evidence", []), "trace_id": report.trace_id}
         return json.dumps(data, ensure_ascii=False, indent=2)
 
     @staticmethod
@@ -30,6 +49,10 @@ class ReportGenerator:
         lines = [f"# 选题审查报告：{report.idea}", "", f"**评级：{report.rating.value}** | 置信度：{report.raw_analysis.confidence:.0%}", "", "## 结论", report.conclusion, "", "## 关键发现"]
         for f in report.findings:
             lines.append(f"- {f}")
+        evidence_lines = ReportGenerator._evidence_lines(report)
+        if evidence_lines:
+            lines.extend(["", "## 证据链"])
+            lines.extend(evidence_lines)
         lines.extend(["", "## 建议"])
         for s in report.suggestions:
             lines.append(f"- {s}")

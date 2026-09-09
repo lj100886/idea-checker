@@ -79,6 +79,7 @@ class SearchResult:
     github_meta: Optional[GithubMetadata] = None
     web_meta: Optional[WebMetadata] = None
     aihot_meta: Optional[AihotMetadata] = None
+    readme: Optional[str] = None  # 候选仓库精读（README 截断文本），仅 github 源 top N 有值
 
 
 @dataclass
@@ -103,6 +104,7 @@ class Analysis:
     key_findings: List[str]
     missing_info: List[str]
     search_rounds: int = 0
+    evidence: List[Dict] = field(default_factory=list)  # 证据链：[{url, title, verdict, evidence}]
 
 
 @dataclass

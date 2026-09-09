@@ -17,6 +17,10 @@ class SearchRouter:
         self._sources[name] = source
         logger.info(f"注册搜索源: {name}")
 
+    def get_source(self, name: str) -> Optional[SearchSource]:
+        """按名称取已注册搜索源，未注册返回 None"""
+        return self._sources.get(name)
+
     def get_available_sources(self) -> List[str]:
         return [name for name, src in self._sources.items() if src.is_available()]
 

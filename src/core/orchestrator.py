@@ -41,6 +41,28 @@ class Orchestrator:
             except Exception as e:
                 logger.warning(f"aihot源初始化失败: {e}")
 
+    def _read_candidates(self, results: List[SearchResult]) -> None:
+        """候选仓库精读：对本轮 github 源结果按 stars 取 top N 拉 README，失败静默跳过。
+
+        精读文本附着在 SearchResult.readme 上，供分析阶段作为证据上下文使用，
+        可显著减少"只看摘要误判撞车"的问题。
+        """
+        n = int(self.config.get("review.readme_top_n", 3) or 0)
+        if n <= 0:
+            return
+        gh = self.search_router.get_source("github")
+        if gh is None or not hasattr(gh, "fetch_readme"):
+            return
+        candidates = [r for r in results if r.source == "github" and r.url and not r.readme]
+        candidates.sort(key=lambda r: (r.github_meta.stars if r.github_meta else 0), reverse=True)
+        for r in candidates[:n]:
+            parsed = gh.repo_name_from_url(r.url)
+            if not parsed:
+                continue
+            r.readme = gh.fetch_readme(parsed[0], parsed[1])
+            if r.readme:
+                logger.info(f"[精读] {r.title}（{len(r.readme)} 字符）")
+
     def check_idea(self, idea: str, persona: str = "default") -> Report:
         trace_id = str(uuid.uuid4())[:8]
         logger.info(f"[{trace_id}] 开始审查: {idea}")
@@ -63,6 +85,7 @@ class Orchestrator:
                         logger.warning(f"搜索失败: {e.message}")
                         search_log.append({"round": round_num, "keyword": query.keyword, "error": e.message})
                 all_results.extend(round_results)
+                self._read_candidates(round_results)
                 if not all_results:
                     analysis = Analysis(has_similar=False, similar_count=0, max_quality="无搜索结果", differentiation="无法判断", rating=Rating.UNKNOWN, confidence=0.0, key_findings=["所有搜索源均未返回结果"], missing_info=["需要搜索结果"], search_rounds=round_num)
                     break
