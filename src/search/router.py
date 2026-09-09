@@ -28,11 +28,11 @@ class SearchRouter:
         if query.source and query.source in self._sources:
             return self._search_with_source(query.source, query.keyword, trace_id)
         keyword_lower = query.keyword.lower()
-        source_order = ["github", "aihot"]
+        source_order = ["github", "aihot", "tavily"]
         if any(k in keyword_lower for k in ["github", "开源", "repository", "repo"]):
-            source_order = ["github", "aihot"]
+            source_order = ["github", "tavily", "aihot"]
         elif any(k in keyword_lower for k in ["ai", "人工智能", "大模型", "llm", "gpt"]):
-            source_order = ["aihot", "github"]
+            source_order = ["tavily", "aihot", "github"]
         all_results = []
         for source_name in source_order:
             if source_name not in self._sources:

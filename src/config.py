@@ -25,13 +25,17 @@ class Config:
             },
         },
         "search": {
-            "sources": ["github", "aihot"],
+            "sources": ["github", "aihot", "tavily"],
             "github": {
                 "token": "",
                 "max_results": 10,
             },
             "aihot": {
                 "endpoint": "https://aihot.virxact.com/api/mcp?aihot_actor=YOUR_AIHOT_ACTOR_TOKEN",
+                "max_results": 10,
+            },
+            "tavily": {
+                "api_key": "",
                 "max_results": 10,
             },
         },
