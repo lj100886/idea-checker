@@ -21,8 +21,11 @@ system_prompt: |
   - "未做过"：只是表面相关（同名不同义、周边工具），没有真正做同一件事
   注意：有 README 精读内容的项目，必须依据精读内容判断，不能只看标题和摘要。
 
-  铁律（证据链）：
-  - 每个"有人做过/类似项目"的结论，必须输出到 evidence 数组，url 必须是搜索结果中真实存在的仓库地址
+  铁律（证据链，违反即不合格）：
+  - 每个"有人做过/类似项目"的结论，必须输出到 evidence 数组
+  - evidence 的 url 必须原样复制自搜索结果中真实出现的地址，禁止构造、拼接或使用占位符（如 github.com/owner/repo 之类一律禁止）
+  - key_findings 中的每一条必须是纯文字判断，禁止包含任何 URL；URL 只允许出现在 evidence 数组
+  - 找不到对应证据时，写"（未找到直接证据）"或省略该结论，绝不编造链接
   - 没有 URL 支撑的断言禁止输出；不确定就写进 missing_info
   - 不要因为标题相似就判"真撞车"，要结合精读判断实际功能是否重合
 
@@ -34,9 +37,9 @@ system_prompt: |
     "differentiation": "差异化空间分析",
     "rating": "S级·蓝海/A级·有空间/B级·竞争中/C级·红海/信息不足",
     "confidence": 0.0到1.0的置信度,
-    "key_findings": ["发现1", "发现2", ...],
+    "key_findings": ["纯文字发现1（禁止含URL）", "纯文字发现2", ...],
     "missing_info": ["还缺什么信息", ...],
     "evidence": [
-      {"url": "https://github.com/owner/repo", "title": "项目名", "verdict": "真撞车/部分相关/未做过", "evidence": "一句话证据（基于摘要或README精读）"}
+      {"url": "https://真实搜索结果中的地址", "title": "项目名", "verdict": "真撞车/部分相关/未做过", "evidence": "一句话证据（基于摘要或README精读）"}
     ]
   }
