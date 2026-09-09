@@ -49,3 +49,16 @@ Thumbs.db
 upload_batches*/
 batch_upload.py
 split_batches*.py
+
+# 本地独有文件（勿入库）
+HANDOVER_LLM_KEY_SECURITY.md
+compress_images.py
+convert_images.py
+shrink_bmp.py
+reports/
+wx_b64.txt
+wx_bmp_content.txt
+wx_content.txt
+wx_latin.txt
+zfb_b64.txt
+zfb_bmp_content.txt
