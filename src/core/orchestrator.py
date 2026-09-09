@@ -7,6 +7,7 @@ from ..config import Config
 from ..search.router import SearchRouter
 from ..search.github_source import GithubSource
 from ..search.aihot_source import AihotSource
+from ..search.tavily_source import TavilySource
 from ..llm.router import LLMRouter
 from .llm_engine import LLMEngine
 from .prompt_manager import PromptManager
@@ -40,6 +41,11 @@ class Orchestrator:
                 self.search_router.register_source("aihot", AihotSource(config.get("aihot", {})))
             except Exception as e:
                 logger.warning(f"aihot源初始化失败: {e}")
+        if "tavily" in sources:
+            try:
+                self.search_router.register_source("tavily", TavilySource(config.get("tavily", {})))
+            except Exception as e:
+                logger.warning(f"Tavily源初始化失败: {e}")
 
     def _read_candidates(self, results: List[SearchResult]) -> None:
         """候选仓库精读：对本轮 github 源结果按 stars 取 top N 拉 README，失败静默跳过。
