@@ -1,6 +1,6 @@
 # KEY_SECURITY_AUDIT · idea-checker 密钥安全审计报告
 
-> 审计日期：2026-09-09
+> 审计日期：2026-09-09（2026-09-10 更新收款码描述）
 > 审计对象：GitHub 公开仓库 `lj100886/idea-checker`（main 分支 + v1.0.0 release）
 > 审计方式：仓库文件清单核验 + 全部文本文件人工全文核查 + 提交历史逐 commit 核验 + 历史重写工具处置
 
@@ -18,7 +18,7 @@
 | 仓库文件清单（根目录 + 全部子目录） | 无 `config.json` / `.env` / `*.key` / `secret*` / `token*` 类文件 |
 | 全部文本文件全文核查（.py/.md/.yaml/.json/.iss/.spec/.txt） | 仅发现 aihot actor token 一处真实敏感值；LLM Key、搜索 token 字段均为空或占位符 |
 | `README.md` 配置示例 | 占位符「你的key」，无需修改 |
-| 收款码文件 | 仓库仅有 `assets/donation/wx.png` / `zfb.png`（README 明示的打赏功能）；`wx_b64.txt` / `zfb_b64.txt` 从未入库 |
+| 收款码文件 | 仓库有 `assets/donation/wx.bmp` / `zfb.bmp`（真实收款码，2026-09-10 替换原占位图）；`wx_b64.txt` / `zfb_b64.txt` 从未入库 |
 | 提交历史（20 个 commit） | `config.json` / `.env` / b64 文件从未入库；aihot token 自 `fa1c3c46` 起存在 |
 | release v1.0.0 | target = 最新 commit；附带的 `idea-checker.exe`（编译产物）含同一 token |
 
@@ -28,6 +28,7 @@
 2. **代码加固**：`src/config.py` 中 `search.aihot.endpoint` 现为 `https://aihot.virxact.com/api/mcp?aihot_actor=YOUR_AIHOT_ACTOR_TOKEN`，真实 token 改由用户级配置 `~/.idea-checker/config.json` 覆盖。
 3. **`.gitignore` 补全**：新增 `config*.json`、`.env`、`*.key`、`.idea-checker/` 规则，防止配置类文件再次入库。
 4. **README**：配置示例本为占位符，未改动。
+5. **打赏收款码**：2026-09-10 将 `assets/donation/` 中两张无关占位图替换为真实微信/支付宝收款码（BMP 格式，与 `idea-checker.iss` 引用一致）。
 
 ## 四、完成标准核对
 
