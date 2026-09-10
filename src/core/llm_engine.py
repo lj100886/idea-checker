@@ -73,7 +73,7 @@ class LLMEngine:
     def decompose_idea(self, idea: str, trace_id: str = "") -> Tuple[List[SearchQuery], TokenUsage]:
         system_prompt = self.prompts.get_prompt("decompose")
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"用户想法：{idea}"}]
-        content, usage = self.llm.chat(messages, temperature=0.3, max_tokens=500, trace_id=trace_id)
+        content, usage = self.llm.chat(messages, temperature=0.3, max_tokens=1500, trace_id=trace_id)
         data = self._parse_json_response(content)
         queries = []
         for q in data.get("queries", []):
@@ -94,7 +94,7 @@ class LLMEngine:
         if context:
             user_msg += f"\n\n历史分析：{json.dumps(context, ensure_ascii=False)[:1000]}"
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_msg}]
-        content, usage = self.llm.chat(messages, temperature=0.4, max_tokens=3000, trace_id=trace_id)
+        content, usage = self.llm.chat(messages, temperature=0.4, max_tokens=4000, trace_id=trace_id)
         data = self._parse_json_response(content)
         try:
             rating = Rating(data.get("rating", "信息不足"))
@@ -110,7 +110,7 @@ class LLMEngine:
         system_prompt = self.prompts.get_prompt("should_continue")
         analysis_dict = {"has_similar": analysis.has_similar, "similar_count": analysis.similar_count, "rating": analysis.rating.value, "confidence": analysis.confidence, "missing_info": analysis.missing_info, "search_rounds": analysis.search_rounds}
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"当前分析：{json.dumps(analysis_dict, ensure_ascii=False)}"}]
-        content, usage = self.llm.chat(messages, temperature=0.2, max_tokens=800, trace_id=trace_id)
+        content, usage = self.llm.chat(messages, temperature=0.2, max_tokens=1200, trace_id=trace_id)
         try:
             data = self._parse_json_response(content)
         except Exception:
@@ -130,7 +130,7 @@ class LLMEngine:
             system_prompt += f"\n\n【人设】\n{persona_prompt}"
         analysis_dict = {"rating": analysis.rating.value, "confidence": analysis.confidence, "key_findings": analysis.key_findings, "differentiation": analysis.differentiation, "evidence": analysis.evidence}
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"想法：{idea}\n分析：{json.dumps(analysis_dict, ensure_ascii=False)}"}]
-        content, usage = self.llm.chat(messages, temperature=0.6, max_tokens=1000, trace_id=trace_id)
+        content, usage = self.llm.chat(messages, temperature=0.6, max_tokens=1500, trace_id=trace_id)
         data = self._parse_json_response(content)
         report = Report(idea=idea, rating=analysis.rating, findings=data.get("findings", analysis.key_findings), conclusion=data.get("conclusion", ""), suggestions=data.get("suggestions", []), persona=persona, raw_analysis=analysis, trace_id=trace_id, token_usage=usage)
         return report, usage

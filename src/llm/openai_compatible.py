@@ -1,4 +1,4 @@
-"""OpenAI兼容API提供者（硅基流动、豆包、OpenRouter、DeepSeek等）"""
+"""OpenAI兼容API提供者（硅基流动、豆包、OpenRouter、DeepSeek、商汤SenseNova等）"""
 import time
 import requests
 from typing import List, Dict, Tuple
@@ -22,16 +22,41 @@ class OpenAICompatibleProvider(LLMProvider):
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         payload = {"model": self.model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
         last_error = None
+        retried_for_empty = False  # 思考模型 content 被思考占满时，放大 max_tokens 重试一次
         for attempt in range(self.max_retries + 1):
             try:
                 resp = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
                 if resp.status_code == 429:
-                    raise AppError(code=ErrorCode.LLM_API_ERROR, message=f"限流429，尝试{attempt+1}", source="llm")
+                    # 限流：部分平台（商汤SenseNova等）按短时频率限制，需更长退避
+                    backoff = 10 * (attempt + 1)  # 10s / 20s / 30s
+                    time.sleep(backoff)
+                    raise AppError(code=ErrorCode.LLM_API_ERROR, message=f"限流429，已退避{backoff}s（第{attempt+1}次）", source="llm")
                 resp.raise_for_status()
                 data = resp.json()
-                content = data["choices"][0]["message"]["content"]
+                msg = data["choices"][0]["message"]
+                content = msg.get("content") or ""
+                reasoning = msg.get("reasoning_content") or ""
                 usage_data = data.get("usage", {})
-                usage = TokenUsage(prompt_tokens=usage_data.get("prompt_tokens", 0), completion_tokens=usage_data.get("completion_tokens", 0), total_tokens=usage_data.get("total_tokens", 0), model=self.model)
+                usage = TokenUsage(
+                    prompt_tokens=usage_data.get("prompt_tokens", 0),
+                    completion_tokens=usage_data.get("completion_tokens", 0),
+                    total_tokens=usage_data.get("total_tokens", 0),
+                    model=self.model,
+                )
+                if not content and reasoning and not retried_for_empty:
+                    # 思考模型：所有 token 都被 reasoning 占用，content 为空；放大 max_tokens 重试一次
+                    retried_for_empty = True
+                    payload["max_tokens"] = max(max_tokens * 2, 2048)
+                    last_error = AppError(
+                        code=ErrorCode.LLM_API_ERROR,
+                        message="思考模型输出为空（reasoning占满token），放大max_tokens重试",
+                        source="llm",
+                    )
+                    time.sleep(0.5)
+                    continue
+                if not content and reasoning:
+                    # 兜底：重试后仍为空，退回 reasoning 内容，避免上层拿到空串崩溃
+                    return reasoning, usage
                 return content, usage
             except AppError as e:
                 last_error = e

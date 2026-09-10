@@ -1,7 +1,7 @@
 """编排器：统筹整个审查流程"""
 import uuid
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from ..models import Report, SearchQuery, SearchResult, Analysis, TokenUsage, AppError, ErrorCode, Rating
 from ..config import Config
 from ..search.router import SearchRouter
@@ -28,6 +28,8 @@ class Orchestrator:
         search_config = self.config.get("search", {})
         self._init_search_sources(search_config)
         self.max_rounds = self.config.get("review.max_rounds", 5)
+        # 借鉴《N次嵌套式单AI审查》：最小轮次 = 初次分析 1 次 + 至少 1 轮审查
+        self.min_rounds = max(2, int(self.config.get("review.min_rounds", 1) or 1))
 
     def _init_search_sources(self, config: dict):
         sources = config.get("sources", ["github", "aihot"])
@@ -80,6 +82,7 @@ class Orchestrator:
             queries, usage = self.llm_engine.decompose_idea(idea, trace_id)
             total_usage = self._add_usage(total_usage, usage)
             analysis = None
+            prev_analysis = None  # 用于量化不动点停机比较（借鉴N次嵌套式单AI审查）
             for round_num in range(1, self.max_rounds + 1):
                 round_results = []
                 for query in queries[:3]:
@@ -100,12 +103,18 @@ class Orchestrator:
                 analysis.search_rounds = round_num
                 if round_num >= self.max_rounds:
                     break
+                # —— 借鉴《N次嵌套式单AI审查》铁律三：量化不动点停机 ——
+                halt, halt_reason = self._halt_by_fixed_point(analysis, prev_analysis, round_num)
+                if halt:
+                    logger.info(f"[{trace_id}] {halt_reason}")
+                    break
                 should_continue, next_queries, usage = self.llm_engine.should_continue(analysis, trace_id)
                 total_usage = self._add_usage(total_usage, usage)
                 if not should_continue:
                     break
                 queries = next_queries or queries
                 context = {"previous_rating": analysis.rating.value, "previous_confidence": analysis.confidence}
+                prev_analysis = analysis
             if analysis is None:
                 analysis = Analysis(has_similar=False, similar_count=0, max_quality="", differentiation="", rating=Rating.UNKNOWN, confidence=0.0, key_findings=["审查异常"], missing_info=[])
             report, usage = self.llm_engine.generate_report(analysis, idea, persona, trace_id)
@@ -123,3 +132,34 @@ class Orchestrator:
         total.completion_tokens += new.completion_tokens
         total.total_tokens += new.total_tokens
         return total
+
+    def _halt_by_fixed_point(self, current: Analysis, prev: Optional[Analysis], round_num: int) -> Tuple[bool, str]:
+        """量化不动点停机（借鉴《N次嵌套式单AI审查》铁律三）。
+
+        停机 = 第 N 轮相对第 N-1 轮未产出新的可执行信息（证据无新增 = 不动点）。
+        量化指标（任一命中即停）：
+          1. 信息增益 < 5%：本轮证据 URL 中新增占比不足 5%
+          2. 证据重复度 > 90%：本轮与上轮证据 URL 集合 Jaccard 相似度超过 90%
+          3. 行动增量 = 0：本轮证据与上轮完全一致（Jaccard = 1，即集合相等）
+
+        最小轮次约束：至少完成「初次分析 + 1 轮审查」（round_num >= min_rounds）才允许量化停机，
+        避免过早收敛。证据以 URL 集合为准，全部为可计算的客观事实，不依赖 LLM 主观判断。
+        """
+        if round_num < self.min_rounds or prev is None:
+            return False, ""
+        cur_urls = {e.get("url", "").strip() for e in current.evidence if e.get("url")}
+        prev_urls = {e.get("url", "").strip() for e in prev.evidence if e.get("url")}
+        cur_urls.discard("")
+        prev_urls.discard("")
+        if not cur_urls:
+            return False, ""
+        new_urls = cur_urls - prev_urls
+        info_gain = len(new_urls) / len(cur_urls)
+        if info_gain < 0.05:
+            return True, f"不动点停机：信息增益 {info_gain:.1%} < 5%（第{round_num}轮无新证据）"
+        union = cur_urls | prev_urls
+        if union:
+            jaccard = len(cur_urls & prev_urls) / len(union)
+            if jaccard > 0.90:
+                return True, f"不动点停机：证据重复度 {jaccard:.1%} > 90%（第{round_num}轮证据与上轮高度重合）"
+        return False, ""
