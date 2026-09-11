@@ -30,6 +30,7 @@ hiddenimports = [
     'yaml',
     'PIL',
     'PIL.Image',
+    'src.ui.config_window',
 ] + pyqt6_hidden
 
 a = Analysis(

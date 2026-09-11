@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Optional, List
 
 from PyQt6.QtWidgets import (QApplication, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QSystemTrayIcon, QMenu, QListWidget, QSpinBox, QFileDialog)
-from PyQt6.QtCore import Qt, QTimer, QTransform, pyqtSignal, QObject
-from PyQt6.QtGui import QPixmap, QPainter, QIcon, QAction, QColor, QImage
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt6.QtGui import QPixmap, QPainter, QIcon, QAction, QColor, QImage, QTransform
 
 from ..config import Config
 from ..core.orchestrator import Orchestrator

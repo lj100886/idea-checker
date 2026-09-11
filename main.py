@@ -64,8 +64,14 @@ def main():
     parser.add_argument("--mcp", action="store_true", help="启动MCP服务器模式")
     parser.add_argument("-c", "--config", help="配置文件路径")
     parser.add_argument("--list-personas", action="store_true", help="列出所有人设")
+    parser.add_argument("--config-ui", "--gui", action="store_true", help="打开图形化配置界面")
 
     args = parser.parse_args()
+
+    if args.config_ui:
+        from src.ui.config_window import run_config_ui
+        run_config_ui(args.config)
+        return
 
     if args.pet:
         from src.ui.pet_window import run_desktop_pet
