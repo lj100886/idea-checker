@@ -4,6 +4,40 @@ import sys
 import logging
 import argparse
 
+
+def _ensure_standard_streams():
+    """保证 stdin/stdout/stderr 可用。
+
+    PyInstaller 以 windowed 模式（console=False）打包时，三个标准流会被置为 None，
+    此时任何 print()/input()/logging 写流都会抛 `RuntimeError: lost sys.stderr`。
+    这里优先附加到父控制台，失败则新建控制台；仍失败则兜底到 devnull，避免崩溃。
+    """
+    if sys.platform != "win32":
+        return
+    if sys.stdin is not None and sys.stdout is not None and sys.stderr is not None:
+        return
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        if not kernel32.AttachConsole(-1):  # ATTACH_PARENT_PROCESS
+            kernel32.AllocConsole()
+        sys.stdin = open("CONIN$", "r", encoding="utf-8", errors="replace")
+        sys.stdout = open("CONOUT$", "w", encoding="utf-8", errors="replace")
+        sys.stderr = open("CONOUT$", "w", encoding="utf-8", errors="replace")
+    except Exception:
+        try:
+            import os
+            if sys.stdout is None:
+                sys.stdout = open(os.devnull, "w", encoding="utf-8")
+            if sys.stderr is None:
+                sys.stderr = open(os.devnull, "w", encoding="utf-8")
+        except Exception:
+            pass
+
+
+# 无控制台构建下先补齐标准流，再做 UTF-8 设置
+_ensure_standard_streams()
+
 # Windows控制台UTF-8编码（避免emoji/中文输出崩溃）
 if sys.platform == "win32":
     try:
