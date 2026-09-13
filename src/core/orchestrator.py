@@ -11,6 +11,7 @@ from ..search.tavily_source import TavilySource
 from ..llm.router import LLMRouter
 from .llm_engine import LLMEngine
 from .prompt_manager import PromptManager
+from .ranking import rank_results, market_saturation
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +122,9 @@ class Orchestrator:
             total_usage = self._add_usage(total_usage, usage)
             report.token_usage = total_usage
             report.search_log = search_log
+            # 竞品量化排序（数据驱动，不依赖 LLM）
+            report.ranking = rank_results(all_results)
+            report.saturation = market_saturation(report.ranking)
             return report
         except AppError as e:
             logger.error(f"审查失败: {e.message}")

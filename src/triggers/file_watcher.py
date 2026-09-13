@@ -33,23 +33,30 @@ class FileWatcherTrigger:
         llm_discover_cfg = self.config.get("triggers.file_watcher.llm_discover", {})
         if not skip_llm_discover and llm_discover_cfg.get("enabled", False):
             self._use_llm_classify = llm_discover_cfg.get("use_llm_classify", True)
-            try:
-                llm_provider = self.orchestrator.llm_router.api_provider
-                self._llm_discoverer = LLMDiscoverer(llm_provider, llm_discover_cfg)
-                default_roots = [str(Path.home()), "D:\\", str(Path.home() / "AppData" / "Roaming"), str(Path.home() / "AppData" / "Local")]
-                roots = llm_discover_cfg.get("scan_roots", default_roots)
-                roots = [r for r in roots if Path(r).exists()]
-                logger.info(f"LLM目录发现启动，扫描 {len(roots)} 个根目录")
-                tree = self._llm_discoverer.scan_directory_tree(roots)
-                discovered = self._llm_discoverer.discover_agent_dirs(tree)
-                for item in discovered:
-                    p = Path(item.get("path", ""))
-                    if p.exists() and p not in self.watch_dirs:
-                        self.watch_dirs.append(p)
-                        logger.info(f"LLM发现: {p} (置信度 {item.get('confidence', 0):.2f})")
-            except Exception as e:
-                logger.error(f"LLM目录发现失败: {e}")
+            # 安全约束：必须显式配置 scan_roots，禁止默认全量扫描 ~/ 与 D:\
+            roots = llm_discover_cfg.get("scan_roots")
+            if not roots:
+                logger.error(
+                    "llm_discover.scan_roots 未配置，拒绝默认全量扫描（会扫 ~/ 与 D:\\，存在隐私外发风险），"
+                    "已禁用目录发现。如需启用，请在配置中显式指定 scan_roots（如只指向不含敏感内容的项目目录）。"
+                )
                 self._llm_discoverer = None
+            else:
+                try:
+                    llm_provider = self.orchestrator.llm_router.api_provider
+                    self._llm_discoverer = LLMDiscoverer(llm_provider, llm_discover_cfg)
+                    roots = [r for r in roots if Path(r).exists()]
+                    logger.info(f"LLM目录发现启动，扫描 {len(roots)} 个根目录")
+                    tree = self._llm_discoverer.scan_directory_tree(roots)
+                    discovered = self._llm_discoverer.discover_agent_dirs(tree)
+                    for item in discovered:
+                        p = Path(item.get("path", ""))
+                        if p.exists() and p not in self.watch_dirs:
+                            self.watch_dirs.append(p)
+                            logger.info(f"LLM发现: {p} (置信度 {item.get('confidence', 0):.2f})")
+                except Exception as e:
+                    logger.error(f"LLM目录发现失败: {e}")
+                    self._llm_discoverer = None
 
     def _default_on_review(self, report: Report):
         from ..core.report_generator import ReportGenerator

@@ -55,6 +55,9 @@ class GithubMetadata:
     forks: int = 0
     language: str = ""
     updated_at: Optional[str] = None
+    license: Optional[str] = None      # SPDX 标识，无协议为 None
+    archived: bool = False             # 仓库是否已归档（停止维护）
+    pushed_at: Optional[str] = None    # 最近一次 push 时间
 
 
 @dataclass
@@ -120,6 +123,8 @@ class Report:
     trace_id: str = ""
     token_usage: Optional[TokenUsage] = None
     search_log: List[Dict] = field(default_factory=list)
+    ranking: List[Dict] = field(default_factory=list)        # 竞品量化排序（见 core/ranking.py）
+    saturation: Optional[Dict] = None                        # 市场饱和度（数据量化档 S/A/B/C）
     generated_at: datetime = field(default_factory=datetime.now)
 
 

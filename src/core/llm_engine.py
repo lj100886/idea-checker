@@ -121,7 +121,7 @@ class LLMEngine:
             next_queries.append(SearchQuery(keyword=q.get("keyword", ""), dimension=q.get("dimension", "补充搜索"), priority=q.get("priority", 0)))
         return should, next_queries, usage
 
-    def generate_report(self, analysis: Analysis, idea: str, persona: str = "default", trace_id: str = "") -> Tuple[Report, TokenUsage]:
+    def generate_report(self, analysis: Analysis, idea: str, persona: str = "default", trace_id: str = "", ranking: Optional[List[Dict]] = None, saturation: Optional[Dict] = None) -> Tuple[Report, TokenUsage]:
         system_prompt = self.prompts.get_prompt("report")
         from ..config import Config
         config = Config()
@@ -132,5 +132,5 @@ class LLMEngine:
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"想法：{idea}\n分析：{json.dumps(analysis_dict, ensure_ascii=False)}"}]
         content, usage = self.llm.chat(messages, temperature=0.6, max_tokens=1500, trace_id=trace_id)
         data = self._parse_json_response(content)
-        report = Report(idea=idea, rating=analysis.rating, findings=data.get("findings", analysis.key_findings), conclusion=data.get("conclusion", ""), suggestions=data.get("suggestions", []), persona=persona, raw_analysis=analysis, trace_id=trace_id, token_usage=usage)
+        report = Report(idea=idea, rating=analysis.rating, findings=data.get("findings", analysis.key_findings), conclusion=data.get("conclusion", ""), suggestions=data.get("suggestions", []), persona=persona, raw_analysis=analysis, trace_id=trace_id, token_usage=usage, ranking=ranking or [], saturation=saturation)
         return report, usage

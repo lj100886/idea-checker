@@ -41,7 +41,16 @@ class GithubSource(SearchSource):
             raise AppError(code=ErrorCode.SEARCH_SOURCE_UNAVAILABLE, message=f"GitHub搜索失败: {str(e)}", source="github")
         results = []
         for item in data.get("items", []):
-            results.append(SearchResult(title=item.get("full_name", ""), url=item.get("html_url", ""), snippet=item.get("description", "") or "无描述", source="github", github_meta=GithubMetadata(stars=item.get("stargazers_count", 0), forks=item.get("forks_count", 0), language=item.get("language", ""), updated_at=item.get("updated_at", ""))))
+            lic = item.get("license") or {}
+            results.append(SearchResult(title=item.get("full_name", ""), url=item.get("html_url", ""), snippet=item.get("description", "") or "无描述", source="github", github_meta=GithubMetadata(
+                stars=item.get("stargazers_count", 0),
+                forks=item.get("forks_count", 0),
+                language=item.get("language", "") or "",
+                updated_at=item.get("updated_at", "") or None,
+                license=(lic.get("spdx_id") if isinstance(lic, dict) else None) or None,
+                archived=bool(item.get("archived", False)),
+                pushed_at=item.get("pushed_at", "") or None,
+            )))
         return results
 
     @staticmethod

@@ -31,6 +31,16 @@ class ReportGenerator:
         if evidence_lines:
             lines.extend(["", "【证据链】"])
             lines.extend(evidence_lines)
+        # 竞品量化排序（数据驱动，替代纯 LLM 定级）
+        if report.saturation:
+            lines.extend(["", "【竞品量化排序 · 数据驱动】"])
+            sat = report.saturation
+            lines.append(f"  市场量化档：{sat['tier']}级 · {sat['label']}（最高分 {sat['max_score']}，Top5 均值 {sat['index']}，共 {sat['top_n']} 个 GitHub 对标）")
+            for i, r in enumerate(report.ranking[:10], 1):
+                sig = r.get("signals", {})
+                lic = sig.get("license") or "无协议"
+                arch = " [已归档]" if sig.get("archived") else ""
+                lines.append(f"  {i}. {r['title']}  {r['score']}分  ★{sig.get('stars', 0)} Fork{sig.get('forks', 0)}  {lic}{arch}")
         lines.extend(["", "【建议】"])
         for i, s in enumerate(report.suggestions, 1):
             lines.append(f"  {i}. {s}")
@@ -41,7 +51,7 @@ class ReportGenerator:
 
     @staticmethod
     def to_json(report: Report) -> str:
-        data = {"idea": report.idea, "rating": report.rating.value, "conclusion": report.conclusion, "findings": report.findings, "suggestions": report.suggestions, "persona": report.persona, "confidence": report.raw_analysis.confidence, "search_rounds": report.raw_analysis.search_rounds, "evidence": getattr(report.raw_analysis, "evidence", []), "trace_id": report.trace_id}
+        data = {"idea": report.idea, "rating": report.rating.value, "conclusion": report.conclusion, "findings": report.findings, "suggestions": report.suggestions, "persona": report.persona, "confidence": report.raw_analysis.confidence, "search_rounds": report.raw_analysis.search_rounds, "evidence": getattr(report.raw_analysis, "evidence", []), "trace_id": report.trace_id, "market_saturation": report.saturation, "ranking": report.ranking}
         return json.dumps(data, ensure_ascii=False, indent=2)
 
     @staticmethod
@@ -53,6 +63,14 @@ class ReportGenerator:
         if evidence_lines:
             lines.extend(["", "## 证据链"])
             lines.extend(evidence_lines)
+        if report.saturation:
+            sat = report.saturation
+            lines.extend(["", "## 竞品量化排序（数据驱动）", f"**市场量化档：{sat['tier']}级 · {sat['label']}**（最高分 {sat['max_score']}，Top5 均值 {sat['index']}，共 {sat['top_n']} 个 GitHub 对标）"])
+            for i, r in enumerate(report.ranking[:10], 1):
+                sig = r.get("signals", {})
+                lic = sig.get("license") or "无协议"
+                arch = "（已归档）" if sig.get("archived") else ""
+                lines.append(f"{i}. **{r['title']}** {r['score']}分 — ★{sig.get('stars', 0)} Fork{sig.get('forks', 0)} {lic}{arch}")
         lines.extend(["", "## 建议"])
         for s in report.suggestions:
             lines.append(f"- {s}")

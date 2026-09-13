@@ -30,6 +30,7 @@ hiddenimports = [
     'yaml',
     'PIL',
     'PIL.Image',
+    'src.ui.config_window',
 ] + pyqt6_hidden
 
 a = Analysis(
@@ -74,7 +75,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # 无控制台窗口
+    console=True,  # 需要控制台：CLI/交互模式依赖 stdin/stdout/stderr（无控制台会导致 lost sys.stderr）
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
